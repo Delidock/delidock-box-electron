@@ -28,6 +28,7 @@ const createWindow = () => {
     const win = new BrowserWindow({
       width: 800,
       height: 480,
+      titleBarStyle: 'hidden' //hidden title bar = boraderless window 
     })
     win.loadFile(contentPath)
 
@@ -36,7 +37,7 @@ const createWindow = () => {
     win.closable = false //user unclosable
     win.menuBarVisible = false //invisible menu bar
     win.setResizable(false) //user unresizable
-    win.titleBarStyle = "hidden" //hidden title bar = boraderless window 
+  
 }
 
 app.whenReady().then(() => {
