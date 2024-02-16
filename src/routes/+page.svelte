@@ -117,7 +117,7 @@
                 loading = false
             })
             
-            socket.on("activate", async (userId, generated) => {        
+            socket.on("activate", async (userId, generated) => {   
                 let status : number
                 if (generated === activationGenerated) {
                     status = 0
@@ -134,8 +134,9 @@
                 })
 
                 if (res.status === 200 && status === 0) {
-                    correctPin = (await res.json()).pin
-                    boxName = (await res.json()).name
+                    const awaitedJson = await res.json()    
+                    boxName = awaitedJson.name
+                    correctPin = awaitedJson.pin
                     connectToLivekit(token)
                     activation = false
                 }

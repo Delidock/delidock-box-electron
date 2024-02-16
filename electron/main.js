@@ -37,7 +37,6 @@ const createWindow = () => {
     win.closable = false //user unclosable
     win.menuBarVisible = false //invisible menu bar
     win.setResizable(false) //user unresizable
-  
 }
 
 app.whenReady().then(() => {
