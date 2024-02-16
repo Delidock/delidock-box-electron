@@ -1,7 +1,7 @@
 <script lang="ts">
     import BackspaceIcon from '$lib/assets/icons/BackspaceIcon.svelte';
 	import UnlockIcon from '$lib/assets/icons/UnlockIcon.svelte';
-    import { Room } from 'livekit-client'
+    import { Room, VideoPresets } from 'livekit-client'
 	import { onMount } from 'svelte';
     import { io } from "socket.io-client";
     import QRCode from 'qrcode';
@@ -68,7 +68,11 @@
         }).then(async (res) => {
 
             const livekitToken = await res.text()
-            const room = new Room()
+            const room = new Room({
+                videoCaptureDefaults: {
+                    resolution: VideoPresets.h1080.resolution
+                }
+            })
             
             await room.prepareConnection(livekitUrl, livekitToken)
             await room.connect(livekitUrl, livekitToken)
@@ -102,6 +106,7 @@
             socket.on("initialized", (data) => {
                 activation = false
                 correctPin = data.pin.toString()
+                boxName = data.name
                 connectToLivekit(token)
                 loading = false
             })
@@ -130,6 +135,7 @@
 
                 if (res.status === 200 && status === 0) {
                     correctPin = (await res.json()).pin
+                    boxName = (await res.json()).name
                     connectToLivekit(token)
                     activation = false
                 }
@@ -152,6 +158,10 @@
                 unlockDoors()
             })
 
+            socket.on("nameSet", (name) => {
+                boxName = name
+            })
+
             setInterval(() => {
                 checkDoors(token)
             }, 1000)
@@ -160,6 +170,8 @@
 
     let pinValue : string = ""
     let correctPin : string
+    
+    let boxName : string = "Delidock good boy"
 
     let pinInvalidNotifier : boolean
     let pinCorrectNotifier : boolean
@@ -215,7 +227,8 @@
 </svelte:head>
 <main class="flex flex-row h-full w-full gap-4 relative p-4">
     {#if loading}
-        <div class="top-0 left-0 bg-background w-screen h-screen absolute z-10 flex justify-center items-center">
+        <div class="top-0 left-0 bg-background w-screen h-screen absolute z-10 flex justify-center items-center flex-col gap-2">
+            <img src="images/doggo.svg" class="w-32" alt="">
             <p>Your good boy is loading...</p>
         </div>
     {/if}
@@ -240,7 +253,7 @@
         </div>
     </div>
     <section class=" w-full h-full flex flex-col py-4">
-        <p class="w-full text-3xl text-center">Hafik</p>
+        <p class="w-full text-3xl text-center">{boxName}</p>
         <div class="w-full flex justify-center items-center h-full">
             <img src="images/doggo.svg" class="w-2/3" alt="">
         </div>
