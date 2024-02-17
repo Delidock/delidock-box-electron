@@ -6,10 +6,11 @@ This is designed for Rasspberry PI so it is utilizin GPIO
 - `NodeJS` >= 20
 ### Configuration
 - specify required **enviroment variables**:
-    - `DELIDOCK_API_URL`="https://delidock-api.stepskop.xyz" - base url of Delidock API
-    - `DELIDOCK_LIVEKIT_URL`="https://delidock-livekit.stepskop.xyz" - base url of Livekit server
-    - `DELIDOCK_BOX_ID`="64a233a33kafdf6b2b542po0" - box specific unique ID
-    - `DELIDOCK_BOX_PSK`="box-preshared-key" - box preshared key (like password)
+    - **DELIDOCK_API_URL**="https://delidock-api.stepskop.xyz" - base url of Delidock API
+    - **DELIDOCK_LIVEKIT_URL**="https://delidock-livekit.stepskop.xyz" - base url of Livekit server
+    - **DELIDOCK_BOX_ID**="64a233a33kafdf6b2b542po0" - box specific unique ID
+    - **DELIDOCK_BOX_PSK**="box-preshared-key" - box preshared key (like password)
+<br><br>
 - see `electron/main.js` for app window configuration, refer to [official Electron docs](https://www.electronjs.org/)
 - see `electron/main.js` for GPIO configuration, refer to [onoff library docs](https://github.com/fivdi/onoff)
 ## Installing dependencies
