@@ -21,7 +21,6 @@ npm i
 ## Building
 ```
 npm run build
-npx electron-rebuild
 ```
 ### Building - create executable
 Build installable **.deb** package -> available only on Debian based distros, for building for other OS see [electron-pacakger](https://github.com/electron/packager) repo.
