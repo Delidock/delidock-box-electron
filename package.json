@@ -19,8 +19,8 @@
     "installer:linux:amd64": "electron-installer-debian --src dist/delidock-box-client-linux-x64/ --dest dist/installers/ --arch amd64",
     "packager:linux:arm64": "electron-packager . delidock-box-client --platform linux --arch arm64 --out dist/",
     "installer:linux:arm64": "electron-installer-debian --src dist/delidock-box-client-linux-arm64/ --dest dist/installers/ --arch arm64",
-    "deb:amd64":"npm run rebuild && npm run build && npm run packager:linux:amd64 && npm run installer:linux:amd64",
-    "deb:arm64":"npm run rebuild && npm run build && npm run packager:linux:arm64 && npm run installer:linux:arm64"
+    "deb:amd64": "npm run rebuild && npm run build && npm run packager:linux:amd64 && npm run installer:linux:amd64",
+    "deb:arm64": "npm run rebuild && npm run build && npm run packager:linux:arm64 && npm run installer:linux:arm64"
   },
   "devDependencies": {
     "@electron/rebuild": "^3.6.0",
@@ -34,7 +34,6 @@
     "@typescript-eslint/parser": "^6.0.0",
     "autoprefixer": "^10.4.17",
     "electron": "^28.2.3",
-    "electron-installer-debian": "^3.2.0",
     "electron-packager": "^17.1.2",
     "eslint": "^8.56.0",
     "eslint-config-prettier": "^9.1.0",
@@ -51,6 +50,7 @@
   },
   "type": "module",
   "dependencies": {
+    "dotenv": "^16.4.4",
     "electron-squirrel-startup": "^1.0.0",
     "express": "^4.18.2",
     "express-rate-limit": "^7.1.5",

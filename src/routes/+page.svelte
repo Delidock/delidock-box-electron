@@ -1,16 +1,15 @@
 <script lang="ts">
     import BackspaceIcon from '$lib/assets/icons/BackspaceIcon.svelte';
 	import UnlockIcon from '$lib/assets/icons/UnlockIcon.svelte';
-    import { Room, VideoPresets } from 'livekit-client'
+    import { Room } from 'livekit-client'
 	import { onMount } from 'svelte';
     import { io } from "socket.io-client";
     import QRCode from 'qrcode';
-    import { DELIDOCK_API_URL, DELIDOCK_LIVEKIT_URL, DELIDOCK_BOX_ID, DELIDOCK_BOX_PSK} from '$env/static/public'
 
-    const api : string = DELIDOCK_API_URL ?? ''
-    const livekitUrl : string = DELIDOCK_LIVEKIT_URL ?? ''
-    const boxId : string = DELIDOCK_BOX_ID ?? ''
-    const psk : string = DELIDOCK_BOX_PSK ?? ''
+    let api : string
+    let livekitUrl : string
+    let boxId : string
+    let psk : string
     const unlockDoors = () => {
         fetch('http://localhost:3030/gpio/unlock')
     }
@@ -69,8 +68,16 @@
 
             const livekitToken = await res.text()
             const room = new Room({
+                publishDefaults: {
+                    simulcast: false,
+                },
+                adaptiveStream: false,
+                dynacast: false,
                 videoCaptureDefaults: {
-                    resolution: VideoPresets.h1080.resolution
+                    resolution: {
+                        width: 1920,
+                        height: 1440
+                    }
                 }
             })
             
@@ -83,89 +90,98 @@
     }
 
     onMount(() => {
-        if (!api || !livekitUrl || !boxId || !psk) {
-            loading = false
-            showError = "Something is missing :("
-            return
-        }
+        fetch('http://localhost:3030/config').then((res) => {
+            res.json().then((data) => {
+               api = data.api
+               livekitUrl = data.livekitUrl
+               boxId = data.boxId
+               psk = data.psk
 
-        fetch(api+"/status/login", {
-            method: "POST",
-            headers: {Accept: '*/*', 'Content-Type': 'application/json'},
-            body: JSON.stringify({id: boxId, psk})
-        }).then(async (res) => {
-            
-            const token = await res.text()
-        
-            const socket = io(api+"/ws/boxes", {
-                auth: {
-                    token: token
+               if (!api || !livekitUrl || !boxId || !psk) {
+                    loading = false
+                    showError = "Something is missing :("
+                    return
                 }
-            });
 
-            socket.on("initialized", (data) => {
-                activation = false
-                correctPin = data.pin.toString()
-                boxName = data.name
-                connectToLivekit(token)
-                loading = false
-            })
-
-            socket.on("activation", () => {
-                activation = true
-                showQr(boxId)
-                loading = false
-            })
-            
-            socket.on("activate", async (userId, generated) => {   
-                let status : number
-                if (generated === activationGenerated) {
-                    status = 0
-                } else {
-                    status = 1
-                }
-                const res = await fetch(api+"/status/activate", {
+                fetch(api+"/status/login", {
                     method: "POST",
-                    headers: {
-                        'Content-Type': "application/json",
-                        Authorization: "Bearer "+token
-                    },
-                    body: JSON.stringify({userId, status})
+                    headers: {Accept: '*/*', 'Content-Type': 'application/json'},
+                    body: JSON.stringify({id: boxId, psk})
+                }).then(async (res) => {
+                    
+                    const token = await res.text()
+                
+                    const socket = io(api+"/ws/boxes", {
+                        auth: {
+                            token: token
+                        }
+                    });
+
+                    socket.on("initialized", (data) => {
+                        activation = false
+                        correctPin = data.pin.toString()
+                        boxName = data.name
+                        connectToLivekit(token)
+                        loading = false
+                    })
+
+                    socket.on("activation", () => {
+                        activation = true
+                        showQr(boxId)
+                        loading = false
+                    })
+                    
+                    socket.on("activate", async (userId, generated) => {   
+                        let status : number
+                        if (generated === activationGenerated) {
+                            status = 0
+                        } else {
+                            status = 1
+                        }
+                        const res = await fetch(api+"/status/activate", {
+                            method: "POST",
+                            headers: {
+                                'Content-Type': "application/json",
+                                Authorization: "Bearer "+token
+                            },
+                            body: JSON.stringify({userId, status})
+                        })
+
+                        if (res.status === 200 && status === 0) {
+                            const awaitedJson = await res.json()    
+                            boxName = awaitedJson.name
+                            correctPin = awaitedJson.pin
+                            connectToLivekit(token)
+                            activation = false
+                        }
+                    })
+
+                    socket.on("change",() => {
+                        const randomNumber = Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
+                        correctPin = randomNumber
+                        fetch(api+"/status/changed", {
+                            method: "PUT",
+                            headers: {
+                                'Content-Type': "application/json",
+                                Authorization: "Bearer "+token
+                            },
+                            body: JSON.stringify({newPin: randomNumber})
+                        })
+                    })
+
+                    socket.on("unlock",() => {
+                        unlockDoors()
+                    })
+
+                    socket.on("nameSet", (name) => {
+                        boxName = name
+                    })
+
+                    setInterval(() => {
+                        checkDoors(token)
+                    }, 700)
                 })
-
-                if (res.status === 200 && status === 0) {
-                    const awaitedJson = await res.json()    
-                    boxName = awaitedJson.name
-                    correctPin = awaitedJson.pin
-                    connectToLivekit(token)
-                    activation = false
-                }
             })
-
-            socket.on("change",() => {
-                const randomNumber = Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
-                correctPin = randomNumber
-                fetch(api+"/status/changed", {
-                    method: "PUT",
-                    headers: {
-                        'Content-Type': "application/json",
-                        Authorization: "Bearer "+token
-                    },
-                    body: JSON.stringify({newPin: randomNumber})
-                })
-            })
-
-            socket.on("unlock",() => {
-                unlockDoors()
-            })
-
-            socket.on("nameSet", (name) => {
-                boxName = name
-            })
-
-            setInterval(() => {
-                checkDoors(token)
-            }, 1000)
         })
     })
 
@@ -250,7 +266,7 @@
 <svelte:head>
     <title>Delidock</title>
 </svelte:head>
-<main class="flex flex-row h-full w-full gap-4 relative p-4">
+<main class="flex flex-row h-full w-full relative">
     {#if loading}
         <div class="top-0 left-0 bg-background w-screen h-screen absolute z-10 flex justify-center items-center flex-col gap-2">
             <img src="images/doggo.svg" class="w-32" alt="">
@@ -277,13 +293,13 @@
             <canvas bind:this={canvasElement}></canvas>
         </div>
     </div>
-    <section class=" w-full h-full flex flex-col py-4">
-        <p class="w-full text-3xl text-center">{boxName}</p>
+    <section class=" w-2/5 h-full flex flex-col p-2 py-4 border-2 border-btn_secondary">
+        <p class="w-full text-2xl text-center">{boxName}</p>
         <div class="w-full flex justify-center items-center h-full">
             <img src="images/doggo.svg" class="w-2/3" alt="">
         </div>
     </section>
-    <form on:submit|preventDefault={() => submitPin()} class="bg-background rounded-xl w-full h-full flex flex-col gap-2 p-4">
+    <form on:submit|preventDefault={() => submitPin()} class="bg-background w-3/5 h-full flex flex-col gap-2 p-2">
         <div class="w-full h-1/4">
             <div class="relative transition-colors ease-in-out w-full h-full bg-secondary border-2 border-btn_secondary rounded-lg text-text_color text-base flex-row flex px-3 items-center gap-3" class:border-red={pinInvalidNotifier} class:border-green={pinCorrectNotifier}>
                 {#if pinValue.length === 0}
@@ -297,14 +313,14 @@
         <div class="w-full h-full justify-center items-center">
             <div class="grid grid-cols-3 gap-2 h-full">
                 {#each keypad as key}
-                    <button type="button" on:click={() => keypadClick(key.toString())} class="text-xl flex justify-center items-center bg-btn_secondary rounded-lg w-full h-full solid-shadow active:bg-btn_pressed active:scale-95 transition-all"  class:!bg-btn_pressed={keypadKeysHover[key]} class:scale-95={keypadKeysHover[key]}>
+                    <button type="button" on:click={() => keypadClick(key.toString())} class="text-2xl flex justify-center items-center bg-btn_secondary rounded-lg w-full h-full solid-shadow active:bg-btn_pressed active:scale-95 transition-all"  class:!bg-btn_pressed={keypadKeysHover[key]} class:scale-95={keypadKeysHover[key]}>
                         <p>{key}</p>
                     </button>
                 {/each}
                 <button type="button" on:click={() => backspace()} class="text-xl flex justify-center items-center bg-red red-shadow active:bg-[#892A35] rounded-lg w-full active:scale-95 transition-all" class:!bg-[#892A35]={keypadKeysHover["backspace"]} class:scale-95={keypadKeysHover["backspace"]}>
                     <BackspaceIcon/>
                 </button>
-                <button type="button" on:click={() => keypadClick("0")}  class="text-xl flex justify-center items-center bg-btn_secondary rounded-lg w-full solid-shadow active:bg-btn_pressed active:scale-95 transition-all" class:!bg-btn_pressed={keypadKeysHover["0"]} class:scale-95={keypadKeysHover["0"]}>
+                <button type="button" on:click={() => keypadClick("0")}  class="text-2xl flex justify-center items-center bg-btn_secondary rounded-lg w-full solid-shadow active:bg-btn_pressed active:scale-95 transition-all" class:!bg-btn_pressed={keypadKeysHover["0"]} class:scale-95={keypadKeysHover["0"]}>
                     <p>0</p>
                 </button>
                 <button type="submit" on:click={()=> keypadClick("enter")} class="text-xl flex justify-center items-center bg-green rounded-lg w-full green-shadow active:bg-[#358153] active:scale-95 transition-all" class:!bg-[#358153]={keypadKeysHover["enter"]} class:scale-95={keypadKeysHover["enter"]}>
