@@ -1,7 +1,7 @@
 {
   "name": "delidock-box-client",
   "description": "Hello World!",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "author": "Delidock Team",
   "private": true,
   "main": "electron/main.js",
