@@ -28,7 +28,7 @@ const createWindow = () => {
     const win = new BrowserWindow({
       width: 800,
       height: 480,
-      titleBarStyle: 'hidden' //hidden title bar = boraderless window 
+      titleBarStyle: 'hidden', //hidden title bar = boraderless window 
     })
     win.loadFile(contentPath)
 
@@ -40,8 +40,8 @@ const createWindow = () => {
 }
 
 app.whenReady().then(() => {
-    createWindow()
-    server.listen(expressPort, '127.0.0.1');
+  createWindow()
+  server.listen(expressPort, '127.0.0.1');
 })
 unlockRouter.get('/', (req, res) => {
   const lock = new Gpio(18, 'out')

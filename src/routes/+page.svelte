@@ -195,6 +195,7 @@
     }
 
     const backspace = () => {
+        keypadClick("backspace")
         resetState()
         pinValue = pinValue.slice(0, -1)
     }
@@ -222,6 +223,29 @@
         pinCorrectNotifier = false
     }
 
+    const keypadKeysHover : {[key: string]: boolean} = {
+        "1": false,
+        "2": false,
+        "3": false,
+        "4": false,
+        "5": false,
+        "6": false,
+        "7": false,
+        "8": false,
+        "9": false,
+        "enter":false,
+        "backpsace":false
+    }
+
+    const keypadClick = (key: string) => {
+        keypadKeysHover[key] = true
+        if (key != "enter" && key != "backspace") {
+            typePinNumber(key)
+        }
+        setTimeout(() => {
+            keypadKeysHover[key] = false
+        }, 100)
+    }
 </script>
 <svelte:head>
     <title>Delidock</title>
@@ -273,17 +297,17 @@
         <div class="w-full h-full justify-center items-center">
             <div class="grid grid-cols-3 gap-2 h-full">
                 {#each keypad as key}
-                    <button type="button" on:click={() => typePinNumber(key.toString())} class="text-xl flex justify-center items-center bg-btn_secondary rounded-lg w-full h-full solid-shadow active:bg-btn_pressed active:scale-95 transition-all">
+                    <button type="button" on:click={() => keypadClick(key.toString())} class="text-xl flex justify-center items-center bg-btn_secondary rounded-lg w-full h-full solid-shadow active:bg-btn_pressed active:scale-95 transition-all"  class:!bg-btn_pressed={keypadKeysHover[key]} class:scale-95={keypadKeysHover[key]}>
                         <p>{key}</p>
                     </button>
                 {/each}
-                <button type="button" on:click={() => backspace()} class="text-xl flex justify-center items-center bg-red red-shadow active:bg-[#892A35] rounded-lg w-full  active:scale-95 transition-all">
+                <button type="button" on:click={() => backspace()} class="text-xl flex justify-center items-center bg-red red-shadow active:bg-[#892A35] rounded-lg w-full active:scale-95 transition-all" class:!bg-[#892A35]={keypadKeysHover["backspace"]} class:scale-95={keypadKeysHover["backspace"]}>
                     <BackspaceIcon/>
                 </button>
-                <button type="button" on:click={() => typePinNumber("0")} class="text-xl flex justify-center items-center bg-btn_secondary rounded-lg w-full solid-shadow active:bg-btn_pressed active:scale-95 transition-all">
+                <button type="button" on:click={() => keypadClick("0")}  class="text-xl flex justify-center items-center bg-btn_secondary rounded-lg w-full solid-shadow active:bg-btn_pressed active:scale-95 transition-all" class:!bg-btn_pressed={keypadKeysHover["0"]} class:scale-95={keypadKeysHover["0"]}>
                     <p>0</p>
                 </button>
-                <button type="submit" class="text-xl flex justify-center items-center bg-green rounded-lg w-full green-shadow active:bg-[#358153] active:scale-95 transition-all">
+                <button type="submit" on:click={()=> keypadClick("enter")} class="text-xl flex justify-center items-center bg-green rounded-lg w-full green-shadow active:bg-[#358153] active:scale-95 transition-all" class:!bg-[#358153]={keypadKeysHover["enter"]} class:scale-95={keypadKeysHover["enter"]}>
                     <UnlockIcon/>
                 </button>
             </div>

@@ -14,12 +14,13 @@
     "lint": "prettier --check . && eslint .",
     "format": "prettier --write .",
     "start": "vite build && electron . ",
+    "rebuild": "electron-rebuild",
     "packager:linux:amd64": "electron-packager . delidock-box-client --platform linux --arch x64 --out dist/",
-	"installer:linux:amd64": "electron-installer-debian --src dist/delidock-box-client-linux-x64/ --dest dist/installers/ --arch amd64",
-	"packager:linux:arm64": "electron-packager . delidock-box-client --platform linux --arch arm64 --out dist/",
-	"installer:linux:arm64": "electron-installer-debian --src dist/delidock-box-client-linux-arm64/ --dest dist/installers/ --arch arm64",
-	"deb:amd64":"npm run packager:linux:amd64 && npm run installer:linux:amd64",
-	"deb:arm64":"npm run packager:linux:arm64 && npm run installer:linux:arm64"
+    "installer:linux:amd64": "electron-installer-debian --src dist/delidock-box-client-linux-x64/ --dest dist/installers/ --arch amd64",
+    "packager:linux:arm64": "electron-packager . delidock-box-client --platform linux --arch arm64 --out dist/",
+    "installer:linux:arm64": "electron-installer-debian --src dist/delidock-box-client-linux-arm64/ --dest dist/installers/ --arch arm64",
+    "deb:amd64":"npm run packager:linux:amd64 && npm run installer:linux:amd64",
+    "deb:arm64":"npm run packager:linux:arm64 && npm run installer:linux:arm64"
   },
   "devDependencies": {
     "@electron/rebuild": "^3.6.0",
