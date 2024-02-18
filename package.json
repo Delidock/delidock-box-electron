@@ -1,7 +1,7 @@
 {
   "name": "delidock-box-client",
-  "description": "Hello World!",
-  "version": "0.0.2",
+  "description": "Delidock box client",
+  "version": "0.0.3",
   "author": "Delidock Team",
   "private": true,
   "main": "electron/main.js",
@@ -34,6 +34,7 @@
     "@typescript-eslint/parser": "^6.0.0",
     "autoprefixer": "^10.4.17",
     "electron": "^28.2.3",
+    "electron-installer-debian": "^3.2.0",
     "electron-packager": "^17.1.2",
     "eslint": "^8.56.0",
     "eslint-config-prettier": "^9.1.0",
