@@ -29,6 +29,7 @@ const createWindow = () => {
       width: 800,
       height: 480,
       titleBarStyle: 'hidden', //hidden title bar = boraderless window 
+      fullscreen: true
     })
     win.loadFile(contentPath)
 
