@@ -48,7 +48,7 @@ app.whenReady().then(() => {
 })
 
 const reed = new Gpio(17, 'in')
-const lock = new Gpio(18, 'out', 'falling', {activeLow: true}).
+const lock = new Gpio(18, 'out', 'falling', {activeLow: true})
 
 unlockRouter.get('/', (req, res) => {
   try {
