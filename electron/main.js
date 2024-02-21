@@ -48,13 +48,13 @@ app.whenReady().then(() => {
 })
 
 const reed = new Gpio(17, 'in')
-const lock = new Gpio(18, 'out', 'falling', {activeLow: true})
+const lock = new Gpio(18, 'out', 'falling', {activeLow: true}).
 
 unlockRouter.get('/', (req, res) => {
   try {
-    lock.writeSync(0)
+    lock.writeSync(1)
     setTimeout(() => {
-      lock.writeSync(1)
+      lock.writeSync(0)
     }, 1000)
     res.status(200).send('Door unlocked');
   } catch (error) {
