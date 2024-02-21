@@ -41,26 +41,36 @@ const createWindow = () => {
     win.menuBarVisible = false //invisible menu bar
     win.setResizable(false) //user unresizable
 }
-
+app.disableHardwareAcceleration()
 app.whenReady().then(() => {
   createWindow()
   server.listen(expressPort, '127.0.0.1');
 })
+
+const reed = new Gpio(17, 'in')
+const lock = new Gpio(18, 'out')
+
 unlockRouter.get('/', (req, res) => {
-  const lock = new Gpio(18, 'out')
-  lock.writeSync(0)
-  setTimeout(() => {
-    lock.writeSync(1)
-  }, 1000)
-  res.status(200).send('Door unlocked');
+  try {
+    lock.writeSync(0)
+    setTimeout(() => {
+      lock.writeSync(1)
+    }, 1000)
+    res.status(200).send('Door unlocked');
+  } catch (error) {
+    console.log(error);
+  }
 })
 
 expressApp.get('/gpio/reed', (req, res) => {
-  const reed = new Gpio(17, 'in')
-  if (reed.readSync()) {
-    res.status(200).send('Door is open');
-  } else {
-    res.status(201).send('Door is closed');
+  try {
+    if (reed.readSync()) {
+      res.status(200).send('Door is open');
+    } else {
+      res.status(201).send('Door is closed');
+    }
+  } catch (error) {
+    console.log(error);
   }
 })
 

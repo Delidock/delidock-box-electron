@@ -90,7 +90,8 @@
     }
 
     onMount(() => {
-        fetch('http://localhost:3030/config').then((res) => {
+        try {
+            fetch('http://localhost:3030/config').then((res) => {
             res.json().then((data) => {
                api = data.api
                livekitUrl = data.livekitUrl
@@ -183,6 +184,10 @@
                 })
             })
         })
+        } catch (error) {
+            console.log(error);
+            
+        }
     })
 
     let pinValue : string = ""
