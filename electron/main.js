@@ -52,9 +52,9 @@ const lock = new Gpio(18, 'out', 'falling', {activeLow: true})
 
 unlockRouter.get('/', (req, res) => {
   try {
-    lock.writeSync(1)
+    lock.writeSync(0)
     setTimeout(() => {
-      lock.writeSync(0)
+      lock.writeSync(1)
     }, 1000)
     res.status(200).send('Door unlocked');
   } catch (error) {
