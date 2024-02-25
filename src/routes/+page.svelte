@@ -75,8 +75,8 @@
                 dynacast: false,
                 videoCaptureDefaults: {
                     resolution: {
-                        width: 1920,
-                        height: 1440
+                        width: 1440,
+                        height: 1080
                     }
                 }
             })
