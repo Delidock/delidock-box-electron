@@ -56,6 +56,7 @@
     "express": "^4.18.2",
     "express-rate-limit": "^7.1.5",
     "livekit-client": "^2.0.1",
+    "node-wifi": "^2.0.16",
     "onoff": "^6.0.3",
     "qrcode": "^1.5.3",
     "socket.io-client": "^4.7.4"

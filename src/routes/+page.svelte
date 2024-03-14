@@ -5,6 +5,8 @@
 	import { onMount } from 'svelte';
     import { io } from "socket.io-client";
     import QRCode from 'qrcode';
+    import { AppStateStore } from '$lib';
+	import { goto } from '$app/navigation';
 
     let api : string
     let livekitUrl : string
@@ -12,6 +14,11 @@
     let psk : string
     const unlockDoors = () => {
         fetch('http://localhost:3030/gpio/unlock')
+    }
+
+    const checkNetwork = async () => {
+        const network = await fetch('http://localhost:3030/network')
+        return network.status
     }
 
     const checkDoors = async (token : string) => {
@@ -82,34 +89,47 @@
             })
             
             await room.prepareConnection(livekitUrl, livekitToken)
-            await room.connect(livekitUrl, livekitToken)
+            await room.connect(livekitUrl, livekitToken, {
+                maxRetries: -1
+            })
 
             room.localParticipant.setCameraEnabled(true)
-            
         })
     }
+
+    let networkAttempts = 0
 
     onMount(() => {
         try {
             fetch('http://localhost:3030/config').then((res) => {
-            res.json().then((data) => {
+            res.json().then(async (data) => {
                api = data.api
                livekitUrl = data.livekitUrl
                boxId = data.boxId
                psk = data.psk
 
                if (!api || !livekitUrl || !boxId || !psk) {
-                    loading = false
-                    showError = "Something is missing :("
+                    $AppStateStore.error = "Something is missing :("
                     return
                 }
 
+
+                let connectionCheck = false
+                do {
+                    if (await checkNetwork() === 200) {
+                        networkAttempts = 0
+                        connectionCheck = true
+                    }                    
+                    networkAttempts++
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    
+                } while (!connectionCheck)
                 fetch(api+"/status/login", {
                     method: "POST",
                     headers: {Accept: '*/*', 'Content-Type': 'application/json'},
                     body: JSON.stringify({id: boxId, psk})
                 }).then(async (res) => {
-                    
+                    $AppStateStore.connected = true
                     const token = await res.text()
                 
                     const socket = io(api+"/ws/boxes", {
@@ -119,17 +139,17 @@
                     });
 
                     socket.on("initialized", (data) => {
-                        activation = false
+                        $AppStateStore.activation = false
+                        $AppStateStore.initialized = true
                         correctPin = data.pin.toString()
                         boxName = data.name
                         connectToLivekit(token)
-                        loading = false
                     })
 
                     socket.on("activation", () => {
-                        activation = true
+                        $AppStateStore.activation = true
+                        $AppStateStore.initialized = false
                         showQr(boxId)
-                        loading = false
                     })
                     
                     socket.on("activate", async (userId, generated) => {   
@@ -153,7 +173,8 @@
                             boxName = awaitedJson.name
                             correctPin = awaitedJson.pin
                             connectToLivekit(token)
-                            activation = false
+                            $AppStateStore.activation = false
+                            $AppStateStore.initialized = true
                         }
                     })
 
@@ -181,6 +202,27 @@
                     setInterval(() => {
                         checkDoors(token)
                     }, 700)
+
+                    setInterval(async () => {
+
+                        const networkStatus = await checkNetwork()
+                        
+                        switch (networkStatus) {
+                            case 200:
+                                if (!$AppStateStore.connected) {
+                                    $AppStateStore.connected = true
+                                    networkAttempts = 0
+                                }
+                                break;
+                        
+                            default:
+                                if ($AppStateStore.connected) {
+                                    $AppStateStore.connected = false
+                                    networkAttempts++
+                                }
+                                break;
+                        }
+                    }, 5000)
                 })
             })
         })
@@ -199,10 +241,7 @@
     let pinCorrectNotifier : boolean
     let message : string = "Enter the PIN"
     let doorsOpened : boolean
-    let loading : boolean = true
-    let activation : boolean = false
     let activationGenerated : string
-    let showError : string
 
     let canvasElement : HTMLCanvasElement
 
@@ -255,35 +294,76 @@
         "8": false,
         "9": false,
         "enter":false,
-        "backpsace":false
+        "backpsace":false,
+        "setUp": false,
     }
 
     const keypadClick = (key: string) => {
         keypadKeysHover[key] = true
-        if (key != "enter" && key != "backspace") {
+        if (key != "enter" && key != "backspace" && key != "setUp") {
             typePinNumber(key)
         }
         setTimeout(() => {
             keypadKeysHover[key] = false
         }, 100)
     }
+
+
+    const waitForSetupButton = ()=>{
+        const setupModeWatcher = setInterval(async ()=>{
+            if (!$AppStateStore.setupButtonWatcher) {
+                clearInterval(setupModeWatcher)
+            }
+            const setupButton = await fetch('http://localhost:3030/setup')
+            if (setupButton.status === 200 || false) {
+                clearInterval(setupModeWatcher)
+                goto('/setup')
+            }
+        }, 1000)
+    }
+
+    const openSetupHint = () =>{
+        keypadClick('setUp')
+        $AppStateStore.networkSetupHint = true
+        $AppStateStore.setupButtonWatcher = true
+        waitForSetupButton()
+    }
 </script>
 <svelte:head>
     <title>Delidock</title>
 </svelte:head>
 <main class="flex flex-row h-full w-full relative">
-    {#if loading}
+    {#if !($AppStateStore.initialized || $AppStateStore.activation || $AppStateStore.error)}
         <div class="top-0 left-0 bg-background w-screen h-screen absolute z-10 flex justify-center items-center flex-col gap-2">
             <img src="images/doggo.svg" class="w-32" alt="">
-            <p>Your good boy is loading...</p>
+            {#if $AppStateStore.connected}
+                <p>Your good boy is loading...</p>
+                {:else}
+                <p>Connecting to internet...</p>
+                {#if networkAttempts >= 5}
+                    <p>Could not connect to internet, did you set up the network?</p>
+                    <button on:click={()=>openSetupHint()} class="p-2 flex justify-center items-center bg-btn_secondary rounded-lg solid-shadow active:bg-btn_pressed active:scale-95 transition-all" class:!bg-btn_pressed={keypadKeysHover["setUp"]} class:scale-95={keypadKeysHover['setUp']}>Set up</button>
+                {/if}
+                
+            {/if}
         </div>
     {/if}
-    {#if showError}
+    {#if $AppStateStore.error}
         <div class="top-0 left-0 bg-background w-screen h-screen absolute z-10 flex justify-center items-center">
-            <p>{showError}</p>
+            <p>{$AppStateStore.error}</p>
         </div>
     {/if}
-    <div class:!flex={activation} class="hidden top-0 left-0 bg-background w-screen h-screen absolute z-20 justify-center items-center flex-row gap-2 p-4">
+    {#if $AppStateStore.networkSetupHint}
+        <div class="top-0 left-0 bg-background w-screen h-screen absolute z-10 flex flex-col justify-center items-center">
+            <div class="w-full flex justify-end p-4">
+                <button on:click={()=>{$AppStateStore.networkSetupHint = false; $AppStateStore.setupButtonWatcher = false}} class="w-5 h-5 bg-white"></button>
+            </div>
+            <div class="w-full h-full flex justify-center items-center p-4 flex-col">
+                <p>Hold the setup button on the back of the door.</p>
+            </div>
+        </div>
+    {/if}
+    <div class:!flex={$AppStateStore.activation} class="hidden top-0 left-0 bg-background w-screen h-screen absolute z-20 justify-center items-center flex-row gap-2 p-4">
         <div class="w-1/2 h-full flex flex-col">
             <p class="w-full">To activate this <span class="italic font-bold">puppy</span> open the Delidock on your app and on the home screen click on the + sign to start the activation proccess, then you can scan this QRcode, or enter the credentials manually.</p>
             <br>
@@ -300,9 +380,10 @@
     </div>
     <section class=" w-2/5 h-full flex flex-col p-2 py-4 border-2 border-btn_secondary">
         <p class="w-full text-2xl text-center">{boxName}</p>
-        <div class="w-full flex justify-center items-center h-full">
-            <img src="images/doggo.svg" class="w-2/3" alt="">
+        <div class="w-full flex justify-center items-center h-full flex-col">
+            <img src="images/doggo.svg" class="w-2/3" class:animate-spin={$AppStateStore.connected === false} alt="">
         </div>
+        <p class="w-full text-center hidden" class:!flex={$AppStateStore.connected === false}>Box is offline so it is unlockable only by latest pin.</p>
     </section>
     <form on:submit|preventDefault={() => submitPin()} class="bg-background w-3/5 h-full flex flex-col gap-2 p-2">
         <div class="w-full h-1/4">
