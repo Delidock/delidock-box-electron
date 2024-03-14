@@ -6,19 +6,48 @@
     import { io } from "socket.io-client";
     import QRCode from 'qrcode';
     import { AppStateStore } from '$lib';
-	import { goto } from '$app/navigation';
 
     let api : string
     let livekitUrl : string
     let boxId : string
     let psk : string
+
+    enum NetworkState {
+        disconnected,
+        connected,
+        internet
+    }
+
+    let networkState : NetworkState = NetworkState.disconnected
+
     const unlockDoors = () => {
         fetch('http://localhost:3030/gpio/unlock')
     }
 
-    const checkNetwork = async () => {
-        const network = await fetch('http://localhost:3030/network')
-        return network.status
+    const checkNetwork = async () => {       
+        let checkInternet
+        let checkWifi
+        try {
+            checkInternet = await fetch('https://google.com')
+            if (checkInternet?.status === 200) {            
+                networkState = NetworkState.internet
+                return NetworkState.internet
+            }
+        } catch (error) {
+            try {
+                checkWifi = await fetch('http://localhost:3030/network')
+                if (checkWifi?.status === 200) {
+                    networkState = NetworkState.connected
+                    return NetworkState.connected
+                } else {
+                    networkState = NetworkState.disconnected
+                    return NetworkState.disconnected
+                }
+            } catch (error) {
+                networkState = NetworkState.disconnected
+                return NetworkState.disconnected
+            }
+        }
     }
 
     const checkDoors = async (token : string) => {
@@ -113,31 +142,41 @@
                     return
                 }
 
-
+                if (data.instantSetup) {
+                    const instantSetup = await fetch('http://localhost:3030/network/setup/start')
+                    if (instantSetup.status === 200) {
+                        $AppStateStore.networkSetup = true
+                    }
+                }
+                
                 let connectionCheck = false
                 do {
-                    if (await checkNetwork() === 200) {
+                    if (await checkNetwork() === NetworkState.internet) {
                         networkAttempts = 0
                         connectionCheck = true
                     }                    
                     networkAttempts++
-                    await new Promise(resolve => setTimeout(resolve, 500));
+                    await new Promise(resolve => setTimeout(resolve, 2000));
                     
                 } while (!connectionCheck)
+
+                fetch('http://localhost:3030/kill/setup')
+
+                $AppStateStore.networkSetupHint = false
+                $AppStateStore.networkSetup = false
+
                 fetch(api+"/status/login", {
                     method: "POST",
                     headers: {Accept: '*/*', 'Content-Type': 'application/json'},
                     body: JSON.stringify({id: boxId, psk})
                 }).then(async (res) => {
-                    $AppStateStore.connected = true
+
                     const token = await res.text()
-                
                     const socket = io(api+"/ws/boxes", {
                         auth: {
                             token: token
                         }
                     });
-
                     socket.on("initialized", (data) => {
                         $AppStateStore.activation = false
                         $AppStateStore.initialized = true
@@ -203,26 +242,15 @@
                         checkDoors(token)
                     }, 700)
 
-                    setInterval(async () => {
-
-                        const networkStatus = await checkNetwork()
-                        
-                        switch (networkStatus) {
-                            case 200:
-                                if (!$AppStateStore.connected) {
-                                    $AppStateStore.connected = true
-                                    networkAttempts = 0
-                                }
-                                break;
-                        
-                            default:
-                                if ($AppStateStore.connected) {
-                                    $AppStateStore.connected = false
-                                    networkAttempts++
-                                }
-                                break;
+                    setInterval(() => {
+                        checkNetwork()
+                        if (networkState !== NetworkState.internet) {
+                            networkAttempts++
+                        } else if (networkState === NetworkState.internet) {
+                            networkAttempts = 0
                         }
-                    }, 5000)
+                    }, 1000)
+
                 })
             })
         })
@@ -308,19 +336,18 @@
         }, 100)
     }
 
-
     const waitForSetupButton = ()=>{
         const setupModeWatcher = setInterval(async ()=>{
             if (!$AppStateStore.setupButtonWatcher) {
                 clearInterval(setupModeWatcher)
             }
-            const setupButton = await fetch('http://localhost:3030/setup')
-            if (setupButton.status === 200 || false) {
+            const startSetup = await fetch('http://localhost:3030/network/setup/start')
+            if (startSetup.status === 200) {
+                $AppStateStore.networkSetup = true
                 clearInterval(setupModeWatcher)
-                goto('/setup')
             }
         }, 1000)
-    }
+}
 
     const openSetupHint = () =>{
         keypadClick('setUp')
@@ -328,6 +355,7 @@
         $AppStateStore.setupButtonWatcher = true
         waitForSetupButton()
     }
+
 </script>
 <svelte:head>
     <title>Delidock</title>
@@ -336,7 +364,7 @@
     {#if !($AppStateStore.initialized || $AppStateStore.activation || $AppStateStore.error)}
         <div class="top-0 left-0 bg-background w-screen h-screen absolute z-10 flex justify-center items-center flex-col gap-2">
             <img src="images/doggo.svg" class="w-32" alt="">
-            {#if $AppStateStore.connected}
+            {#if networkState === NetworkState.internet}
                 <p>Your good boy is loading...</p>
                 {:else}
                 <p>Connecting to internet...</p>
@@ -363,6 +391,11 @@
             </div>
         </div>
     {/if}
+    {#if $AppStateStore.networkSetup }
+        <div class="top-0 left-0 bg-background w-screen h-screen absolute z-10 flex justify-center items-center">
+            <p>Setup</p>
+        </div>
+    {/if}
     <div class:!flex={$AppStateStore.activation} class="hidden top-0 left-0 bg-background w-screen h-screen absolute z-20 justify-center items-center flex-row gap-2 p-4">
         <div class="w-1/2 h-full flex flex-col">
             <p class="w-full">To activate this <span class="italic font-bold">puppy</span> open the Delidock on your app and on the home screen click on the + sign to start the activation proccess, then you can scan this QRcode, or enter the credentials manually.</p>
@@ -381,9 +414,12 @@
     <section class=" w-2/5 h-full flex flex-col p-2 py-4 border-2 border-btn_secondary">
         <p class="w-full text-2xl text-center">{boxName}</p>
         <div class="w-full flex justify-center items-center h-full flex-col">
-            <img src="images/doggo.svg" class="w-2/3" class:animate-spin={$AppStateStore.connected === false} alt="">
+            <img src="images/doggo.svg" class="w-2/3" class:animate-spin={networkState !== NetworkState.internet} alt="">
         </div>
-        <p class="w-full text-center hidden" class:!flex={$AppStateStore.connected === false}>Box is offline so it is unlockable only by latest pin.</p>
+        {#if networkAttempts >= 5}
+            <button on:click={()=>openSetupHint()} class="p-2 flex justify-center items-center bg-btn_secondary rounded-lg solid-shadow active:bg-btn_pressed active:scale-95 transition-all" class:!bg-btn_pressed={keypadKeysHover["setUp"]} class:scale-95={keypadKeysHover['setUp']}>Set up new network</button>
+        {/if}
+        <p class="w-full text-center hidden" class:!flex={networkState !== NetworkState.internet}>Box is offline so it is unlockable only by latest pin.</p>
     </section>
     <form on:submit|preventDefault={() => submitPin()} class="bg-background w-3/5 h-full flex flex-col gap-2 p-2">
         <div class="w-full h-1/4">
