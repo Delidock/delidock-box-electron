@@ -6,6 +6,8 @@
     import { io } from "socket.io-client";
     import QRCode from 'qrcode';
     import { AppStateStore } from '$lib';
+	import CrossIcon from '$lib/assets/icons/CrossIcon.svelte';
+    import WifiIcon from '$lib/assets/icons/WifiIcon.svelte'
 
     let api : string
     let livekitUrl : string
@@ -384,7 +386,7 @@
     {#if $AppStateStore.networkSetupHint}
         <div class="top-0 left-0 bg-background w-screen h-screen absolute z-10 flex flex-col justify-center items-center">
             <div class="w-full flex justify-end p-4">
-                <button on:click={()=>{$AppStateStore.networkSetupHint = false; $AppStateStore.setupButtonWatcher = false}} class="w-5 h-5 bg-white"></button>
+                <button on:click={()=>{$AppStateStore.networkSetupHint = false; $AppStateStore.setupButtonWatcher = false}}><CrossIcon/></button>
             </div>
             <div class="w-full h-full flex justify-center items-center p-4 flex-col">
                 <p>Hold the setup button on the back of the door.</p>
@@ -392,8 +394,17 @@
         </div>
     {/if}
     {#if $AppStateStore.networkSetup }
-        <div class="top-0 left-0 bg-background w-screen h-screen absolute z-10 flex justify-center items-center">
-            <p>Setup</p>
+        <div class="top-0 left-0 bg-background w-screen h-screen absolute z-10 flex flex-col justify-center items-center p-12">
+            <div class="w-full flex justify-center items-center text-center text-text_color">
+                <p class="text-4xl">Network setup</p>
+            </div>
+            <div class="w-full h-full items-center flex">
+                <p>Continue in mobile app by clicking plus sign on the homescreen and selecting <span class="Italic">Network setup</span></p>
+            </div>
+            <div class="w-full flex flex-row gap-2 justify-start items-center">
+                <WifiIcon/>
+                <p class="font-bold">DELIDOCK_SETUP</p>
+            </div>
         </div>
     {/if}
     <div class:!flex={$AppStateStore.activation} class="hidden top-0 left-0 bg-background w-screen h-screen absolute z-20 justify-center items-center flex-row gap-2 p-4">
@@ -416,7 +427,7 @@
         <div class="w-full flex justify-center items-center h-full flex-col">
             <img src="images/doggo.svg" class="w-2/3" class:animate-spin={networkState !== NetworkState.internet} alt="">
         </div>
-        {#if networkAttempts >= 5}
+        {#if false}
             <button on:click={()=>openSetupHint()} class="p-2 flex justify-center items-center bg-btn_secondary rounded-lg solid-shadow active:bg-btn_pressed active:scale-95 transition-all" class:!bg-btn_pressed={keypadKeysHover["setUp"]} class:scale-95={keypadKeysHover['setUp']}>Set up new network</button>
         {/if}
         <p class="w-full text-center hidden" class:!flex={networkState !== NetworkState.internet}>Box is offline so it is unlockable only by latest pin.</p>
