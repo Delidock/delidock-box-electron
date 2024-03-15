@@ -112,7 +112,7 @@ expressApp.get('/network', (req, res)=>{
 expressApp.get('/kill/setup', (req, res)=>{
   try {
     if (execSync('ifconfig').toString().includes('ap0:')) {
-      execSync(`psudo create_ap --stop ${process.env.WIFI_IF ?? 'wlo1'}`)
+      execSync(`sudo create_ap --stop ${process.env.WIFI_IF ?? 'wlo1'}`)
       setTimeout(() => {
         setupServer.close()
       }, 5000);
