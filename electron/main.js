@@ -111,11 +111,17 @@ expressApp.get('/network', (req, res)=>{
 
 expressApp.get('/kill/setup', (req, res)=>{
   try {
-    execSync(`echo -e ${process.env.SUDO_PASSWORD} | sudo -S create_ap --stop wlo1`)
-    setupServer.close()
-    res.send()
+    if (execSync('ifconfig').toString().includes('ap0:')) {
+      execSync(`psudo create_ap --stop ${process.env.WIFI_IF ?? 'wlo1'}`)
+      setTimeout(() => {
+        setupServer.close()
+      }, 5000);
+      res.status(200).send()
+    }
+    res.status(201).send()
   } catch (error) {
     console.log(error);
+    res.status(404).send()
   }
 })
 
@@ -125,12 +131,13 @@ expressAppSetup.use(bodyParser.json())
 expressApp.get('/network/setup/start', (req, res)=>{
   try {
     if(setupButton.readSync()){
+    //if(true){
       setupServer.listen(3031)
       wifi.getCurrentConnections((err, networks)=>{
         if (!err && networks.length > 0) {
           wifi.deleteConnection({ssid: networks[0].ssid})
         }
-        execSync(`echo -e ${process.env.SUDO_PASSWORD} | sudo -S create_ap --daemon -n -g 1.0.0.1 wlo1 DELIDOCK_PUPPY_SETUP`).toString()
+        console.log(execSync(`nmcli device disconnect wlo1; sudo create_ap --daemon -n -g 1.0.0.1 ${process.env.WIFI_IF ?? 'wlo1'} DELIDOCK_SETUP`).toString())
         res.status(200).send()
       })
     } else {
@@ -141,17 +148,20 @@ expressApp.get('/network/setup/start', (req, res)=>{
   }
 })
 
-expressAppSetup.post('/network/setup/connect', (req,res)=>{
+expressAppSetup.post('/network/setup/connect', async (req,res)=>{
   try {
     const wifiMessage = execSync(`nmcli device wifi connect "${req.body.ssid}" password '${req.body.password}'`).toString()
     if (wifiMessage.includes('successfully activated')) {
-      execSync(`echo -e ${process.env.SUDO_PASSWORD} | sudo -S create_ap --stop wlo1`).toString()
-      res.status(200).send('Network setup successful')
-      setupServer.close()
-    } else {
-      res.status(400).send(wifiMessage) 
+      const internetCheck = await fetch('https://www.google.com')
+      if (internetCheck.status == 200) {
+        res.status(200).send('OK')
+      } else {
+        res.status(201).send('No internet')
+      }
+    }else {
+      res.status(400).send('Not connected') 
     }
   } catch (error) {
-    console.log(error);
+    res.status(404).send('Ouch') 
   }
 })
