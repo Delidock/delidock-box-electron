@@ -130,8 +130,7 @@ expressAppSetup.use(bodyParser.json())
 
 expressApp.get('/network/setup/start', (req, res)=>{
   try {
-    if(setupButton.readSync() || instantSetupOption) {
-      instantSetupOption = false
+    if(setupButton.readSync()) {
       setupServer.listen(3031)
       wifi.getCurrentConnections((err, networks)=>{
         if (!err && networks.length > 0) {
