@@ -44,7 +44,7 @@ const createWindow = () => {
     win.menuBarVisible = false //invisible menu bar
     
     win.setResizable(false) //user unresizable
-    win.openDevTools()
+    //win.openDevTools()
 }
 
 let instantSetupOption = false
@@ -130,14 +130,14 @@ expressAppSetup.use(bodyParser.json())
 
 expressApp.get('/network/setup/start', (req, res)=>{
   try {
-    if(setupButton.readSync()){
-    //if(true){
+    if(setupButton.readSync() || instantSetupOption) {
+      instantSetupOption = false
       setupServer.listen(3031)
       wifi.getCurrentConnections((err, networks)=>{
         if (!err && networks.length > 0) {
           wifi.deleteConnection({ssid: networks[0].ssid})
         }
-        console.log(execSync(`nmcli device disconnect wlo1; sudo create_ap --daemon -n -g 1.0.0.1 ${process.env.WIFI_IF ?? 'wlo1'} DELIDOCK_SETUP`).toString())
+        console.log(execSync(`nmcli device disconnect ${process.env.WIFI_IF ?? 'wlo1'}; sudo create_ap --daemon -n -g 1.0.0.1 ${process.env.WIFI_IF ?? 'wlo1'} DELIDOCK_SETUP`).toString())
         res.status(200).send()
       })
     } else {
