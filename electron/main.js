@@ -111,11 +111,11 @@ expressApp.get('/network', (req, res)=>{
 
 expressApp.get('/kill/setup', (req, res)=>{
   try {
-    if (execSync('ifconfig').toString().includes('ap0:')) {
-      execSync(`sudo create_ap --stop ${process.env.WIFI_IF ?? 'wlo1'}`)
+    if (execSync(`ifconfig ${process.env.AP_IF ?? 'wlo1'}`).toString().includes('inet')) {
+      execSync(`sudo create_ap --stop ${process.env.AP_IF ?? 'wlo1'}`)
       setTimeout(() => {
         setupServer.close()
-      }, 5000);
+      }, 10000);
       res.status(200).send()
     }
     res.status(201).send()
@@ -130,13 +130,14 @@ expressAppSetup.use(bodyParser.json())
 
 expressApp.get('/network/setup/start', (req, res)=>{
   try {
+    //if(instantSetupOption){
     if(setupButton.readSync()) {
       setupServer.listen(3031)
       wifi.getCurrentConnections((err, networks)=>{
         if (!err && networks.length > 0) {
-          wifi.deleteConnection({ssid: networks[0].ssid})
+          execSync(`nmcli con delete ${networks[0].ssid}`)
         }
-        console.log(execSync(`nmcli device disconnect ${process.env.WIFI_IF ?? 'wlo1'}; sudo create_ap --daemon -n -g 1.0.0.1 ${process.env.WIFI_IF ?? 'wlo1'} DELIDOCK_SETUP`).toString())
+        console.log(execSync(`nmcli device disconnect ${process.env.WIFI_IF ?? 'wlo1'}; sudo create_ap --daemon --no-virt -n -g 1.0.0.1 ${process.env.AP_IF ?? 'wlo1'} DELIDOCK_SETUP`).toString())
         res.status(200).send()
       })
     } else {
@@ -149,7 +150,7 @@ expressApp.get('/network/setup/start', (req, res)=>{
 
 expressAppSetup.post('/network/setup/connect', async (req,res)=>{
   try {
-    const wifiMessage = execSync(`nmcli device wifi connect "${req.body.ssid}" password '${req.body.password}'`).toString()
+    const wifiMessage = execSync(`nmcli device wifi connect "${req.body.ssid}" password '${req.body.password}' ifname ${process.env.WIFI_IF ?? 'wlo1'}`).toString()
     if (wifiMessage.includes('successfully activated')) {
       const internetCheck = await fetch('https://www.google.com')
       if (internetCheck.status == 200) {
