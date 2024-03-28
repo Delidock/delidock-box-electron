@@ -44,7 +44,7 @@ const createWindow = () => {
     win.menuBarVisible = false //invisible menu bar
     
     win.setResizable(false) //user unresizable
-    //win.openDevTools()
+   // win.openDevTools()
 }
 
 let instantSetupOption = false
