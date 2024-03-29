@@ -51,6 +51,7 @@ let instantSetupOption = false
 const setupButton = new Gpio(16, 'in')
 app.disableHardwareAcceleration()
 app.whenReady().then(() => {
+  execSync(`sudo create_ap --stop ${process.env.AP_IF ?? 'wlo1'}`)
   if (setupButton.readSync()) {
     instantSetupOption = true
   }
