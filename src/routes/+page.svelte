@@ -440,23 +440,23 @@
                         <p>{message}</p>
                     </div>  
                 {/if}
-                <input class="w-full h-full bg-secondary outline-none text-center text-5xl" name="pin" bind:value={pinValue} disabled type="password">
+                <input class="cursor-[none] w-full h-full bg-secondary outline-none text-center text-5xl" name="pin" bind:value={pinValue} disabled type="password">
             </div>
         </div>
-        <div class="w-full h-full justify-center items-center">
+        <div class="w-full h-full justify-center items-center cursor-[none]">
             <div class="grid grid-cols-3 gap-2 h-full">
                 {#each keypad as key}
-                    <button type="button" on:click={() => keypadClick(key.toString())} class="text-2xl flex justify-center items-center bg-btn_secondary rounded-lg w-full h-full solid-shadow active:bg-btn_pressed active:scale-95 transition-all"  class:!bg-btn_pressed={keypadKeysHover[key]} class:scale-95={keypadKeysHover[key]}>
+                    <button type="button" on:click={() => keypadClick(key.toString())} class="cursor-[none] text-2xl flex justify-center items-center bg-btn_secondary rounded-lg w-full h-full solid-shadow active:bg-btn_pressed active:scale-95 transition-all"  class:!bg-btn_pressed={keypadKeysHover[key]} class:scale-95={keypadKeysHover[key]}>
                         <p>{key}</p>
                     </button>
                 {/each}
-                <button type="button" on:click={() => backspace()} class="text-xl flex justify-center items-center bg-red red-shadow active:bg-[#892A35] rounded-lg w-full active:scale-95 transition-all" class:!bg-[#892A35]={keypadKeysHover["backspace"]} class:scale-95={keypadKeysHover["backspace"]}>
+                <button type="button" on:click={() => backspace()} class="text-xl flex justify-center cursor-[none] items-center bg-red red-shadow active:bg-[#892A35] rounded-lg w-full active:scale-95 transition-all" class:!bg-[#892A35]={keypadKeysHover["backspace"]} class:scale-95={keypadKeysHover["backspace"]}>
                     <BackspaceIcon/>
                 </button>
-                <button type="button" on:click={() => keypadClick("0")}  class="text-2xl flex justify-center items-center bg-btn_secondary rounded-lg w-full solid-shadow active:bg-btn_pressed active:scale-95 transition-all" class:!bg-btn_pressed={keypadKeysHover["0"]} class:scale-95={keypadKeysHover["0"]}>
+                <button type="button" on:click={() => keypadClick("0")}  class="text-2xl flex justify-center cursor-[none] items-center bg-btn_secondary rounded-lg w-full solid-shadow active:bg-btn_pressed active:scale-95 transition-all" class:!bg-btn_pressed={keypadKeysHover["0"]} class:scale-95={keypadKeysHover["0"]}>
                     <p>0</p>
                 </button>
-                <button type="submit" on:click={()=> keypadClick("enter")} class="text-xl flex justify-center items-center bg-green rounded-lg w-full green-shadow active:bg-[#358153] active:scale-95 transition-all" class:!bg-[#358153]={keypadKeysHover["enter"]} class:scale-95={keypadKeysHover["enter"]}>
+                <button type="submit" on:click={()=> keypadClick("enter")} class="text-xl flex justify-center items-center bg-green cursor-[none] rounded-lg w-full green-shadow active:bg-[#358153] active:scale-95 transition-all" class:!bg-[#358153]={keypadKeysHover["enter"]} class:scale-95={keypadKeysHover["enter"]}>
                     <UnlockIcon/>
                 </button>
             </div>
