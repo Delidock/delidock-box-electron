@@ -8,7 +8,7 @@ import { rateLimit } from 'express-rate-limit'
 import http from 'http'
 import dotenv from 'dotenv'
 import wifi from 'node-wifi'
-import { execSync } from 'child_process';
+import { exec, execSync } from 'child_process';
 import bodyParser from 'body-parser'
 dotenv.config()
 
@@ -47,20 +47,23 @@ const createWindow = () => {
    // win.openDevTools()
 }
 
+const gpioOffset = process.env.GPIO_OFFSET ? parseInt(process.env.GPIO_OFFSET) : 0
+
 let instantSetupOption = false
-const setupButton = new Gpio(16, 'in')
+const setupButton = new Gpio(16 + gpioOffset, 'in')
 app.disableHardwareAcceleration()
 app.whenReady().then(() => {
-  execSync(`sudo create_ap --stop ${process.env.AP_IF ?? 'wlo1'}`)
-  if (setupButton.readSync()) {
-    instantSetupOption = true
-  }
-  createWindow()
-  server.listen(expressPort, '127.0.0.1');
+  exec(`sudo create_ap --stop ${process.env.AP_IF ?? 'wlo1'}`).stdout.on('data', async () =>{
+    if (setupButton.readSync()) {
+      instantSetupOption = true
+    }
+    createWindow()
+    server.listen(expressPort, '127.0.0.1');
+  })
 })
 
-const reed = new Gpio(17, 'in')
-const lock = new Gpio(18, 'high')
+const reed = new Gpio(17 + gpioOffset, 'in')
+const lock = new Gpio(18 + gpioOffset, 'high')
 
 
 unlockRouter.get('/', (req, res) => {
@@ -112,14 +115,16 @@ expressApp.get('/network', (req, res)=>{
 
 expressApp.get('/kill/setup', (req, res)=>{
   try {
-    if (execSync(`ifconfig ${process.env.AP_IF ?? 'wlo1'}`).toString().includes('inet')) {
-      execSync(`sudo create_ap --stop ${process.env.AP_IF ?? 'wlo1'}`)
-      setTimeout(() => {
-        setupServer.close()
-      }, 10000);
-      res.status(200).send()
-    }
-    res.status(201).send()
+    exec(`ifconfig ${process.env.AP_IF ?? 'wlo1'}`).stdout.on('data', async (data)=>{
+      if (data.includes('inet')) {
+        exec(`sudo create_ap --stop ${process.env.AP_IF ?? 'wlo1'}`)
+        setTimeout(() => {
+          setupServer.close()
+        }, 10000);
+        res.status(200).send()
+      }
+      res.status(201).send()
+    })
   } catch (error) {
     console.log(error);
     res.status(404).send()
@@ -136,9 +141,9 @@ expressApp.get('/network/setup/start', (req, res)=>{
       setupServer.listen(3031)
       wifi.getCurrentConnections((err, networks)=>{
         if (!err && networks.length > 0) {
-          execSync(`nmcli con delete ${networks[0].ssid}`)
+          exec(`nmcli con delete ${networks[0].ssid}`)
         }
-        console.log(execSync(`nmcli device disconnect ${process.env.WIFI_IF ?? 'wlo1'}; sudo create_ap --daemon --no-virt -n -g 1.0.0.1 ${process.env.AP_IF ?? 'wlo1'} DELIDOCK_SETUP`).toString())
+        exec(`nmcli device disconnect ${process.env.WIFI_IF ?? 'wlo1'}; sudo create_ap --daemon --no-virt -n -g 1.0.0.1 ${process.env.AP_IF ?? 'wlo1'} DELIDOCK_SETUP`)
         res.status(200).send()
       })
     } else {
@@ -151,17 +156,18 @@ expressApp.get('/network/setup/start', (req, res)=>{
 
 expressAppSetup.post('/network/setup/connect', async (req,res)=>{
   try {
-    const wifiMessage = execSync(`nmcli device wifi connect "${req.body.ssid}" password '${req.body.password}' ifname ${process.env.WIFI_IF ?? 'wlo1'}`).toString()
-    if (wifiMessage.includes('successfully activated')) {
-      const internetCheck = await fetch('https://www.google.com')
-      if (internetCheck.status == 200) {
-        res.status(200).send('OK')
-      } else {
-        res.status(201).send('No internet')
+    exec(`nmcli device wifi connect "${req.body.ssid}" password '${req.body.password}' ifname ${process.env.WIFI_IF ?? 'wlo1'}`).stdout.on('data', async (data) => {
+      if (data.includes('successfully activated')) {
+        const internetCheck = await fetch('https://www.google.com')
+        if (internetCheck.status == 200) {
+          res.status(200).send('OK')
+        } else {
+          res.status(201).send('No internet')
+        }
+      }else {
+        res.status(400).send('Not connected') 
       }
-    }else {
-      res.status(400).send('Not connected') 
-    }
+    })
   } catch (error) {
     res.status(404).send('Ouch') 
   }
