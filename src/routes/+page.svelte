@@ -148,6 +148,7 @@
                     const instantSetup = await fetch('http://localhost:3030/network/setup/start')
                     if (instantSetup.status === 200) {
                         $AppStateStore.networkSetup = true
+                        await new Promise(resolve => setTimeout(resolve, 10000));
                     }
                 }
                 
