@@ -1,0 +1,4 @@
+[Desktop Entry]
+Type=Application
+Name=DelidockClient
+Exec=/usr/bin/delidock-box-client
